@@ -26,6 +26,8 @@ Para actualizar, sustituye los archivos y pulsa la flecha circular de la ficha d
 
 La extensión recoge las peticiones del reproductor tanto desde la página como mediante los eventos del navegador. Solo conserva las últimas peticiones de pistas de YouTube en memoria. No exporta cookies ni solicita contraseñas.
 
+Las respuestas de vídeo se transfieren entre la pestaña y el procesador por fragmentos, sin enviar una respuesta completa en un mensaje. El tamaño del fragmento no limita el tamaño total del archivo. La versión 2.1.5 corrige el error `Message exceeded maximum allowed size of 64MiB` que podía aparecer con respuestas grandes.
+
 Si faltan datos recientes del vídeo, recarga automáticamente la pestaña una vez. Esa recarga puede reiniciar la posición de reproducción. Las validaciones, restricciones de cuenta o región y los cambios de YouTube pueden impedir descargar un vídeo. No admite directos en curso ni contenido con DRM.
 
 ## Durante una descarga

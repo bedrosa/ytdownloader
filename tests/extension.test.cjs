@@ -163,6 +163,23 @@ test('las peticiones desde la pestaña exigen una tarea activa y destino de YouT
   assert.match((await send(message, sender)).error, /ya no está activa/);
 });
 
+test('los fragmentos solo se leen o cancelan desde el motor de la tarea activa', async () => {
+  const {state, send, chrome} = setup();
+  state.task = {id: 'task', tabId: 1, state: 'downloading'};
+  const message = {target: 'background', type: 'page-fetch-read', taskId: 'task', requestId: '12345678-1234-1234-1234-123456789abc'};
+  const sender = {url: chrome.runtime.getURL('offscreen.html')};
+  let calls = 0;
+  chrome.scripting.executeScript = async options => { calls++; assert.equal(options.target.tabId, 1); return [{result: {done: options.args[2], data: 'AQI='}}]; };
+  assert.match((await send(message, {url: 'https://www.youtube.com/'})).error, /Emisor/);
+  assert.match((await send({...message, taskId: 'other'}, sender)).error, /ya no está activa/);
+  assert.match((await send({...message, requestId: '../other'}, sender)).error, /no válida/);
+  assert.equal(calls, 0);
+  assert.equal((await send(message, sender)).data.data, 'AQI=');
+  assert.equal((await send({...message, type: 'page-fetch-cancel'}, sender)).data.done, true);
+  state.task.state = 'cancelled';
+  assert.match((await send(message, sender)).error, /ya no está activa/);
+});
+
 test('solo conserva peticiones de vídeo de YouTube y las elimina al cerrar su pestaña', async () => {
   const {state, events} = setup();
   const request = {tabId: 1, method: 'POST', url: 'https://r1.googlevideo.com/videoplayback?id=stream', initiator: 'https://www.youtube.com', requestBody: {raw: [{bytes: new Uint8Array([1, 2, 3]).buffer}]}};

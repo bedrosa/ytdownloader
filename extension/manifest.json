@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Local · Descargar vídeo",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "minimum_chrome_version": "116",
   "description": "Descarga desde el popup con la calidad que elijas. Todo se procesa dentro del navegador",
   "permissions": ["activeTab", "downloads", "storage", "offscreen", "scripting", "webRequest", "declarativeNetRequestWithHostAccess"],

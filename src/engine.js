@@ -3,6 +3,7 @@ import {FFmpeg} from "@ffmpeg/ffmpeg";
 import {choices, playable, selectTracks, filename} from "./media.js";
 import {readTrack} from "./transfer.js";
 import {playbackInfo, readPlayback} from "./playback.js";
+import {fetchPlayback} from "./page-response.js";
 
 let session;
 let state;
@@ -59,15 +60,7 @@ async function run(message) {
       await publish({message: "Descargando desde la reproducción de YouTube…", percent: 0});
       buffers = await readPlayback(video, tracks, message.captures, signal, async (count, message) => {
         await publish({...(message ? {message} : {}), percent: count != null && total ? Math.min(99, Math.round(count * 100 / total)) : null});
-      }, async (url, body) => {
-        signal.throwIfAborted();
-        const response = await chrome.runtime.sendMessage({target: "background", type: "page-fetch", taskId: state.id, url, body: Array.from(body)});
-        signal.throwIfAborted();
-        if (response?.error) throw new Error(response.error);
-        const result = response?.data;
-        if (!result) throw new Error("No se ha recibido la respuesta del reproductor de YouTube");
-        return new Response(Uint8Array.from(atob(result.data), value => value.charCodeAt(0)), {status: result.status, headers: result.headers});
-      }, async () => {
+      }, (url, body) => fetchPlayback(url, body, state.id, signal), async () => {
         signal.throwIfAborted();
         const response = await chrome.runtime.sendMessage({target: "background", type: "playback-captures", taskId: state.id});
         signal.throwIfAborted();
