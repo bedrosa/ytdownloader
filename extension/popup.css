@@ -1,0 +1,22 @@
+:root { font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #f4f4f5; color-scheme: dark; background: #191b1f; }
+* { box-sizing: border-box; }
+body { width: 370px; margin: 0; }
+[hidden] { display: none !important; }
+header { padding: 21px 22px 10px; }
+.brand { display: flex; align-items: center; gap: 8px; color: #ff5252; font-size: 11px; font-weight: 800; letter-spacing: 1.7px; }
+h1 { margin: 4px 0; font-size: 22px; letter-spacing: -.6px; }
+.subtitle { color: #9299a5; margin: 0; font-size: 12px; }
+main { padding: 0 22px 22px; }
+#title { color: #c3c7cf; font-size: 13px; overflow-wrap: anywhere; }
+label { display: block; font-size: 12px; color: #c2c5cb; margin: 14px 0 6px; }
+select { width: 100%; color: #fafafa; background: #272a30; border: 1px solid #454952; border-radius: 9px; padding: 10px 12px; font: inherit; }
+button { cursor: pointer; border: 0; border-radius: 8px; padding: 7px 10px; color: #ddd; background: #30333a; font: inherit; font-size: 12px; }
+button:focus-visible, select:focus-visible { outline: 2px solid #ff6b6b; outline-offset: 3px; }
+button:disabled { opacity: .45; cursor: default; }
+.primary { width: 100%; background: #d32f2f; color: #fff; font-size: 14px; font-weight: 750; padding: 12px; border-radius: 10px; margin-top: 8px; }
+.primary:hover { background: #b71c1c; }
+#status { color: #c5c8cf; font-size: 12px; overflow-wrap: anywhere; }
+#status.error { color: #fda4af; }
+.note { color: #9299a5; font-size: 11px; margin: 12px 0 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+progress { display: block; width: 100%; height: 5px; margin: 12px 0; accent-color: #e53935; }

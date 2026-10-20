@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>YouTube Local</title><link rel="stylesheet" href="popup.css"><script type="module" src="popup.js"></script></head>
+<body>
+  <header><div class="brand"><img src="icons/icon32.png" width="24" height="24" alt="">YOUTUBE LOCAL</div><h1>Tu vídeo, a tu calidad</h1><p class="subtitle">Todo dentro de tu navegador</p></header>
+  <main>
+    <p id="title">Abre un vídeo de YouTube</p>
+    <div id="fields" hidden>
+      <label for="quality">Calidad del vídeo</label><select id="quality"></select>
+      <label for="container">Formato del archivo</label>
+      <select id="container"><option value="mp4">MP4</option><option value="mkv">MKV · todos los códecs</option></select>
+      <p id="size" class="note"></p>
+      <button id="download" class="primary">Descargar con audio</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <progress id="progress" max="100" hidden aria-label="Progreso de la descarga"></progress>
+    <div class="actions"><button id="retry" hidden>Consultar de nuevo</button><button id="cancel" hidden>Cancelar</button><button id="show" hidden>Mostrar archivo</button><button id="folder">Abrir descargas</button></div>
+    <p class="note">Puedes cerrar el popup mientras descarga. Al cerrar la pestaña de origen se cancela el procesamiento pendiente.</p>
+    <p id="version" class="note"></p>
+  </main>
+</body>
+</html>

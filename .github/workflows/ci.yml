@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validar extensión
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Ejecutar pruebas
+        run: npm test
+      - name: Compilar extensión
+        run: npm run build
+      - name: Comprobar versión y archivos compilados
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p = JSON.parse(fs.readFileSync("package.json")); const m = JSON.parse(fs.readFileSync("extension/manifest.json")); assert.equal(p.version, m.version); if (process.env.GITHUB_REF_TYPE === "tag") assert.equal(process.env.GITHUB_REF_NAME, "v" + p.version);'
+          git diff --exit-code -- extension
+      - name: Empaquetar extensión
+        working-directory: extension
+        run: zip -q -r ../youtube-local.zip .
+      - name: Guardar extensión instalable
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: youtube-local
+          path: youtube-local.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    name: Publicar versión
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Descargar paquete validado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name youtube-local --dir dist
+      - name: Crear versión con ZIP y checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum youtube-local.zip > SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" youtube-local.zip SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --title "YouTube Local $GITHUB_REF_NAME" --generate-notes
