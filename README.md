@@ -59,6 +59,16 @@ Los cambios se preparan en una rama y se integran mediante pull request. La acci
 
 Las pruebas cubren selección de pistas, descarga por fragmentos, protocolo SABR, validación del reproductor, captura desde la página, cancelación y ciclo de vida del popup. No realizan descargas reales de YouTube en GitHub Actions.
 
+## Protección de main
+
+La configuración de protección está en `.github/main-protection.json`: exige pull request, el check **Validar extensión** y conversaciones resueltas. Bloquea el borrado y los force push, también para administradores. No exige la revisión de otra persona para permitir trabajar en solitario.
+
+GitHub requiere un plan compatible, como GitHub Pro, para activar esta protección en repositorios privados. Con ese plan puede aplicarse mediante GitHub CLI:
+
+```sh
+gh api --method PUT repos/bedrosa/ytdownloader/branches/main/protection --input .github/main-protection.json
+```
+
 ## Autor y licencias
 
 Proyecto de [bedrosa](https://github.com/bedrosa), con licencia [MIT](LICENSE).
