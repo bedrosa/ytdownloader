@@ -90,20 +90,66 @@ async function fetchFromYouTube(url, body, videoId, taskId) {
   const key = Symbol.for("youtube-local.fetches");
   const pending = globalThis[key] ||= new Map();
   const controller = new AbortController();
-  const active = pending.get(taskId) || new Set();
-  active.add(controller);
+  const requestId = crypto.randomUUID();
+  const active = pending.get(taskId) || new Map();
+  const entry = {controller, reader: null, buffer: null, offset: 0};
+  active.set(requestId, entry);
   pending.set(taskId, active);
+  const timer = setTimeout(() => controller.abort(), 30000);
   try {
     const fetchVideo = globalThis[Symbol.for("youtube-local.playback")]?.fetch || globalThis.fetch;
-    const response = await fetchVideo.call(globalThis, url, {method: "POST", body: Uint8Array.from(body), headers: {"content-type": "application/x-protobuf", accept: "application/vnd.yt-ump"}, credentials: "include", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)])});
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    let data = "";
-    for (let index = 0; index < bytes.length; index += 32768) data += String.fromCharCode(...bytes.subarray(index, index + 32768));
-    return {status: response.status, headers: Object.fromEntries(response.headers), data: btoa(data)};
-  } finally {
-    active.delete(controller);
+    const response = await fetchVideo.call(globalThis, url, {method: "POST", body: Uint8Array.from(body), headers: {"content-type": "application/x-protobuf", accept: "application/vnd.yt-ump"}, credentials: "include", signal: controller.signal});
+    entry.reader = response.body?.getReader();
+    return {status: response.status, headers: Object.fromEntries(response.headers), requestId};
+  } catch (error) {
+    controller.abort();
+    active.delete(requestId);
     if (!active.size) pending.delete(taskId);
     if (!pending.size) delete globalThis[key];
+    throw error;
+  } finally { clearTimeout(timer); }
+}
+
+async function readYouTubeResponse(requestId, taskId, cancel) {
+  const key = Symbol.for("youtube-local.fetches");
+  const pending = globalThis[key];
+  const active = pending?.get(taskId);
+  const entry = active?.get(requestId);
+  if (!entry) throw new Error("La petición del vídeo ya no está disponible");
+  let finished = false;
+  const timer = setTimeout(() => entry.controller.abort(), 30000);
+  try {
+    if (cancel) {
+      entry.controller.abort();
+      await entry.reader?.cancel().catch(() => {});
+      finished = true;
+      return {done: true};
+    }
+    while (!entry.buffer || entry.offset === entry.buffer.length) {
+      const chunk = await entry.reader?.read();
+      if (!chunk || chunk.done) { finished = true; return {done: true}; }
+      entry.buffer = chunk.value;
+      entry.offset = 0;
+    }
+    const bytes = entry.buffer.subarray(entry.offset, entry.offset + 1024 * 1024);
+    entry.offset += bytes.length;
+    let data = "";
+    for (let index = 0; index < bytes.length; index += 32768) data += String.fromCharCode(...bytes.subarray(index, index + 32768));
+    return {done: false, data: btoa(data)};
+  } catch (error) {
+    entry.controller.abort();
+    await entry.reader?.cancel().catch(() => {});
+    finished = true;
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    if (finished) {
+      entry.reader?.releaseLock();
+      entry.buffer = null;
+      active.delete(requestId);
+      if (!active.size) pending.delete(taskId);
+      if (!pending.size) delete globalThis[key];
+    }
   }
 }
 
@@ -112,7 +158,10 @@ async function abortPageRequests(task) {
   await chrome.scripting.executeScript({target: {tabId: task.tabId}, world: "MAIN", func: taskId => {
     const key = Symbol.for("youtube-local.fetches");
     const pending = globalThis[key];
-    for (const controller of pending?.get(taskId) || []) controller.abort();
+    for (const entry of pending?.get(taskId)?.values() || []) {
+      entry.controller.abort();
+      entry.reader?.cancel().catch(() => {});
+    }
     pending?.delete(taskId);
     if (pending && !pending.size) delete globalThis[key];
   }, args: [task.id]}).catch(() => {});
@@ -155,9 +204,19 @@ async function request(message, sender) {
         return result.result;
       } finally { pageRequests.delete(url.href); }
     }
+    if (["page-fetch-read", "page-fetch-cancel"].includes(message.type)) {
+      const {task} = await chrome.storage.session.get("task");
+      if (task?.id !== message.taskId || task.state !== "downloading") throw new Error("La descarga ya no está activa");
+      if (typeof message.requestId !== "string" || !/^[\w-]{36}$/.test(message.requestId)) throw new Error("Petición de vídeo no válida");
+      const [result] = await chrome.scripting.executeScript({target: {tabId: task.tabId}, world: "MAIN", func: readYouTubeResponse,
+        args: [message.requestId, task.id, message.type === "page-fetch-cancel"]});
+      if (!result?.result) throw new Error("YouTube no ha devuelto el fragmento solicitado");
+      return result.result;
+    }
     if (message.type === "state") {
       const {task} = await chrome.storage.session.get("task");
       if (task?.id !== message.task.id || ["done", "cancelled"].includes(task?.state)) return {};
+      if (["error", "cancelled"].includes(message.task.state)) await abortPageRequests(task);
       await chrome.storage.session.set({task: message.task});
       await closeIfIdle();
       return {};

@@ -26,6 +26,8 @@ Para actualizar, sustituye los archivos y pulsa la flecha circular de la ficha d
 
 La extensión recoge las peticiones del reproductor tanto desde la página como mediante los eventos del navegador. Solo conserva las últimas peticiones de pistas de YouTube en memoria. No exporta cookies ni solicita contraseñas.
 
+Las respuestas de vídeo se transfieren entre la pestaña y el procesador por fragmentos, sin enviar una respuesta completa en un mensaje. El tamaño del fragmento no limita el tamaño total del archivo. La versión 2.1.5 corrige el error `Message exceeded maximum allowed size of 64MiB` que podía aparecer con respuestas grandes.
+
 Si faltan datos recientes del vídeo, recarga automáticamente la pestaña una vez. Esa recarga puede reiniciar la posición de reproducción. Las validaciones, restricciones de cuenta o región y los cambios de YouTube pueden impedir descargar un vídeo. No admite directos en curso ni contenido con DRM.
 
 ## Durante una descarga
@@ -58,6 +60,16 @@ El código fuente está en `src` y en los archivos editables de `extension`: `ba
 Los cambios se preparan en una rama y se integran mediante pull request. La acción **CI** ejecuta las pruebas, compila, comprueba que los archivos generados están actualizados y guarda un ZIP instalable. Un tag `vX.Y.Z` que coincida con la versión del paquete y del manifiesto publica una release con el ZIP y su checksum SHA-256.
 
 Las pruebas cubren selección de pistas, descarga por fragmentos, protocolo SABR, validación del reproductor, captura desde la página, cancelación y ciclo de vida del popup. No realizan descargas reales de YouTube en GitHub Actions.
+
+## Protección de main
+
+La configuración de protección está en `.github/main-protection.json`: exige pull request, el check **Validar extensión** y conversaciones resueltas. Bloquea el borrado y los force push, también para administradores. No exige la revisión de otra persona para permitir trabajar en solitario.
+
+GitHub requiere un plan compatible, como GitHub Pro, para activar esta protección en repositorios privados. Con ese plan puede aplicarse mediante GitHub CLI:
+
+```sh
+gh api --method PUT repos/bedrosa/ytdownloader/branches/main/protection --input .github/main-protection.json
+```
 
 ## Autor y licencias
 
