@@ -15,6 +15,6 @@
     "@ffmpeg/core": "0.12.10",
     "@ffmpeg/ffmpeg": "0.12.15",
     "esbuild": "0.28.2",
-    "youtubei.js": "18.2.0"
+    "youtubei.js": "18.3.0"
   }
 }
